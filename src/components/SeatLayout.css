@@ -1,0 +1,97 @@
+.seat-layout-container {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+.car-container {
+  margin-bottom: 30px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  padding: 15px;
+  background-color: #f8f9fa;
+}
+
+.car-container h3 {
+  margin-top: 0;
+  margin-bottom: 15px;
+  color: #333;
+  text-align: center;
+}
+
+.seat-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+}
+
+.seat {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 50px;
+  background-color: #4CAF50;
+  color: white;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: bold;
+  transition: all 0.2s ease;
+}
+
+.seat:hover:not(.unavailable) {
+  transform: scale(1.05);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.seat.unavailable {
+  background-color: #ccc;
+  color: #888;
+  cursor: not-allowed;
+}
+
+.seat.selected {
+  background-color: #2196F3;
+  transform: scale(1.05);
+  box-shadow: 0 4px 8px rgba(33, 150, 243, 0.3);
+}
+
+.legend {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 20px;
+  gap: 20px;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.seat-icon {
+  width: 20px;
+  height: 20px;
+  border-radius: 4px;
+}
+
+.seat-icon.available {
+  background-color: #4CAF50;
+}
+
+.seat-icon.unavailable {
+  background-color: #ccc;
+}
+
+.seat-icon.selected {
+  background-color: #2196F3;
+}
+
+.loading, .error {
+  text-align: center;
+  padding: 20px;
+  color: #666;
+}
+
+.error {
+  color: #f44336;
+}

@@ -4,10 +4,10 @@ import Seat from '../models/seat.model.js';
 const bookingController = {
   async createBooking(req, res) {
     try {
-      const { userId, departureStationId, arrivalStationId, seatId, travelDate } = req.body;
+      const { userId, departureStationId, arrivalStationId, seatId } = req.body;
       
       // Validate input
-      if (!userId || !departureStationId || !arrivalStationId || !seatId || !travelDate) {
+      if (!userId || !departureStationId || !arrivalStationId || !seatId) {
         return res.status(400).json({ message: 'All fields are required' });
       }
       
@@ -29,12 +29,12 @@ const bookingController = {
         userId,
         departureStationId,
         arrivalStationId,
-        seatId,
-        travelDate
+        seatId
       );
       
       res.status(201).json(booking);
     } catch (error) {
+      console.error('Booking error:', error);
       res.status(500).json({ message: error.message });
     }
   },
@@ -50,6 +50,7 @@ const bookingController = {
       const bookings = await Booking.findByUser(userId);
       res.json(bookings);
     } catch (error) {
+      console.error('Get bookings error:', error);
       res.status(500).json({ message: error.message });
     }
   },
@@ -70,6 +71,7 @@ const bookingController = {
       
       res.json(updatedBooking);
     } catch (error) {
+      console.error('Cancel booking error:', error);
       res.status(500).json({ message: error.message });
     }
   }

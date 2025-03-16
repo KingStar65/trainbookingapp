@@ -2,6 +2,9 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import authRoutes from './routes/auth.routes.js';
+import stationRoutes from './routes/station.routes.js';
+import seatRoutes from './routes/seat.routes.js';
+import bookingRoutes from './routes/booking.routes.js';
 
 dotenv.config();
 const app = express();
@@ -14,6 +17,9 @@ app.use(express.json());
 
 // Routes
 app.use('/api/auth', authRoutes);
+app.use('/api/stations', stationRoutes);
+app.use('/api/seats', seatRoutes);
+app.use('/api/bookings', bookingRoutes);
 
 // Basic route test
 app.get('/api/test', (req, res) => {

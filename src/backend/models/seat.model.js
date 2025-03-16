@@ -1,4 +1,4 @@
-import pool from '../config/db.config.js';
+import pool from '../db.config.js';
 
 const Seat = {
   async getAllSeats() {
@@ -20,9 +20,15 @@ const Seat = {
       FROM bookings
       WHERE seat_id = $1
       AND (
-        (departure_station_id <= $2 AND arrival_station_id > $2) OR
-        (departure_station_id < $3 AND arrival_station_id >= $3) OR
-        (departure_station_id >= $2 AND arrival_station_id <= $3)
+        -- Check if this booking overlaps with the requested journey
+        -- Case 1: The existing booking's departure is within our journey
+        (departure_station_id >= $2 AND departure_station_id < $3) OR
+        
+        -- Case 2: The existing booking's arrival is within our journey
+        (arrival_station_id > $2 AND arrival_station_id <= $3) OR
+        
+        -- Case 3: The existing booking completely encompasses our journey
+        (departure_station_id <= $2 AND arrival_station_id >= $3)
       )
     `;
     
@@ -38,12 +44,14 @@ const Seat = {
           SELECT 1 FROM bookings b
           WHERE b.seat_id = s.id
           AND (
-            (b.departure_station_id <= $1 AND b.arrival_station_id > $1) OR
-            (b.departure_station_id < $2 AND b.arrival_station_id >= $2) OR
-            (b.departure_station_id >= $1 AND b.arrival_station_id <= $2)
+            -- Same overlap logic as in checkSeatAvailability
+            (b.departure_station_id >= $1 AND b.departure_station_id < $2) OR
+            (b.arrival_station_id > $1 AND b.arrival_station_id <= $2) OR
+            (b.departure_station_id <= $1 AND b.arrival_station_id >= $2)
           )
         ) THEN false ELSE true END) AS is_available
       FROM seats s
+      ORDER BY s.car_number, s.seat_number
     `;
     
     const { rows } = await pool.query(query, [departureStationId, arrivalStationId]);

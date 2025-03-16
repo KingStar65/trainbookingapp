@@ -1,4 +1,4 @@
-import pool from '../config/db.config.js';
+import pool from '../db.config.js';
 
 const Station = {
   async findAll() {

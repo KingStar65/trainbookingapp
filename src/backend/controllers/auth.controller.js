@@ -15,11 +15,11 @@ const authController = {
 
       console.log('User found:', { 
         providedPassword: password,
-        storedPassword: user.password_enc  // Changed from password_hash to password_enc
+        storedPassword: user.password_enc 
       });
 
       // Simple password check (for testing only)
-      if (password !== user.password_enc) {  // Changed from password_hash to password_enc
+      if (password !== user.password_enc) {  
         return res.status(400).json({ message: 'Invalid password' });
       }
 

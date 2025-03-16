@@ -1,15 +1,15 @@
-// models/booking.model.js
 import pool from '../db.config.js'
 
 const Booking = {
-  async create(userId, departureStationId, arrivalStationId, seatId, travelDate) {
+  async create(userId, departureStationId, arrivalStationId, seatId) {
     const query = `
       INSERT INTO bookings 
       (user_id, departure_station_id, arrival_station_id, seat_id) 
       VALUES ($1, $2, $3, $4) 
       RETURNING *`;
       
-    const values = [userId, departureStationId, arrivalStationId, seatId, travelDate];
+    // Remove travelDate from values - it's not in the SQL query
+    const values = [userId, departureStationId, arrivalStationId, seatId];
     const { rows } = await pool.query(query, values);
     return rows[0];
   },

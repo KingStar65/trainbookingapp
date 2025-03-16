@@ -16,12 +16,25 @@ const SeatChooser = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const queryParams = new URLSearchParams(location.search);
-  const departureStationId = queryParams.get('departureStationId') || '1';
+  const departureStationId = queryParams.get('departureStationId');
   const arrivalStationId = queryParams.get('arrivalStationId');
   
   useEffect(() => {
     const fetchStationDetails = async () => {
       try {
+        // Check if we have both station IDs
+        if (!departureStationId || !arrivalStationId) {
+          navigate('/station-select');
+          return;
+        }
+        
+        // Validate that arrival is after departure
+        if (parseInt(departureStationId) >= parseInt(arrivalStationId)) {
+          setError('Invalid station selection: arrival must be after departure');
+          return;
+        }
+        
+        // Fetch station details
         const [departureRes, arrivalRes] = await Promise.all([
           axios.get(`/api/stations/${departureStationId}`),
           axios.get(`/api/stations/${arrivalStationId}`)
@@ -30,15 +43,16 @@ const SeatChooser = () => {
         setDepartureStation(departureRes.data);
         setArrivalStation(arrivalRes.data);
       } catch (err) {
+        console.error('Error fetching station details:', err);
         setError('Error fetching station details');
+        
+        // Fallback to hardcoded station names
+        setDepartureStation({ id: departureStationId, name: `Station ${departureStationId}` });
+        setArrivalStation({ id: arrivalStationId, name: `Station ${arrivalStationId}` });
       }
     };
     
-    if (departureStationId && arrivalStationId) {
-      fetchStationDetails();
-    } else {
-      navigate('/station-select');
-    }
+    fetchStationDetails();
   }, [departureStationId, arrivalStationId, navigate]);
   
   const handleSeatSelect = (seatId) => {
@@ -55,26 +69,28 @@ const SeatChooser = () => {
       setIsLoading(true);
       setError(null);
       
-      // Get the current user's ID (you would normally get this from context/redux)
-      const userId = localStorage.getItem('userId'); // Placeholder
-      
-      if (!userId) {
+      // Get the current user's ID from localStorage
+      const userJson = localStorage.getItem('user');
+      if (!userJson) {
         navigate('/login?redirect=/seat-chooser');
         return;
       }
       
-      // Create the booking
+      const user = JSON.parse(userJson);
+      const userId = user.id;
+      
+      // Create the booking - no travel date
       await axios.post('/api/bookings/create', {
         userId,
         departureStationId: parseInt(departureStationId),
         arrivalStationId: parseInt(arrivalStationId),
-        seatId: selectedSeatId,
-        travelDate: new Date().toISOString().split('T')[0] // Today's date
+        seatId: selectedSeatId
       });
       
       // Redirect to booking confirmation page
       navigate('/booking-confirmation');
     } catch (err) {
+      console.error('Error creating booking:', err);
       setError(err.response?.data?.message || 'Error creating booking');
       setIsLoading(false);
     }
@@ -88,7 +104,7 @@ const SeatChooser = () => {
         
         {departureStation && arrivalStation && (
           <div className="journey-details">
-            <p>Journey: {departureStation.name} to {arrivalStation.name}</p>
+            <h3>Journey: {departureStation.name || `Station ${departureStationId}`} to {arrivalStation.name || `Station ${arrivalStationId}`}</h3>
           </div>
         )}
         
@@ -96,7 +112,7 @@ const SeatChooser = () => {
           <Link to="/station-select">
             <button className='back-btn'>
               <ArrowLeft size={14} />
-              Back
+              Back to Stations
             </button>
           </Link>
         </div>
@@ -107,7 +123,7 @@ const SeatChooser = () => {
         
         {selectedSeatId && (
           <div className="selected-seat-info">
-            Selected Seat ID: {selectedSeatId}
+            <p>You have selected Seat #{selectedSeatId}</p>
           </div>
         )}
         

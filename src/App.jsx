@@ -5,6 +5,7 @@ import Register from './pages/Register';
 import SeatChooser from './pages/SeatChooser';
 import Navbar from './components/Navbar'
 import StationSelect from './components/StationSelect';
+import Bookings from './pages/bookings';
 
 function App() {
   return (
@@ -15,6 +16,7 @@ function App() {
         <Route path="/register" element ={<Register/>}/>
         <Route path="/station-select" element ={<StationSelect/>}/>
         <Route path="/seat-chooser" element ={<SeatChooser/>}/>
+        <Route path="bookings" element={<Bookings/>}/>
       </Routes>
     </BrowserRouter>
   );

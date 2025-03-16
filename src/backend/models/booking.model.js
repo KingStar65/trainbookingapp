@@ -13,7 +13,7 @@ const Booking = {
     const { rows } = await pool.query(query, values);
     return rows[0];
   },
-
+  
   async findByUser(userId) {
     const query = `
       SELECT 

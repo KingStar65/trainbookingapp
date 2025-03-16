@@ -8,8 +8,6 @@ const SeatLayout = ({ onSeatSelect }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [selectedSeatId, setSelectedSeatId] = useState(null);
-  
-  const location = useLocation();
   const queryParams = new URLSearchParams(location.search);
   const departureStationId = queryParams.get('departureStationId');
   const arrivalStationId = queryParams.get('arrivalStationId');

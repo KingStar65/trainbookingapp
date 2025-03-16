@@ -1,8 +1,13 @@
-import React from 'react'
+import React from 'react';
+import Navbar from '../components/Navbar';
+import './Bookings.css';
 
 const Bookings = () => {
   return (
-    <div>bookings</div>
+    <>
+    <Navbar/>
+    <div className="header">bookings</div>
+    </>
   )
 }
 

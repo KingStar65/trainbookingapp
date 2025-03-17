@@ -1,5 +1,65 @@
-.welcome{
+.welcome {
     margin-top: 30px;
     text-align: center;
     font-size: 30px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.home-actions {
+    margin-top: 40px;
+    margin-bottom: 40px;
+}
+
+.book-now-button {
+    background-color: #3498db;
+    color: white;
+    font-size: 18px;
+    padding: 12px 30px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: all 0.3s;
+    font-weight: 600;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+.book-now-button:hover {
+    background-color: #2980b9;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.login-prompt {
+    background-color: #f8f9fa;
+    border-radius: 8px;
+    padding: 20px;
+    max-width: 500px;
+    margin: 0 auto;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+.login-prompt p {
+    margin-top: 0;
+    margin-bottom: 15px;
+    font-size: 18px;
+    color: #555;
+}
+
+.login-button {
+    background-color: #2ecc71;
+    color: white;
+    font-size: 16px;
+    padding: 10px 25px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.login-button:hover {
+    background-color: #27ae60;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 }

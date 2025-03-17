@@ -8,6 +8,7 @@ import { ArrowLeft } from 'lucide-react';
 
 const SeatChooser = () => {
   const [selectedSeatId, setSelectedSeatId] = useState(null);
+  const [selectedSeatDetails, setSelectedSeatDetails] = useState(null);
   const [departureStation, setDepartureStation] = useState(null);
   const [arrivalStation, setArrivalStation] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -47,16 +48,17 @@ const SeatChooser = () => {
         setError('Error fetching station details');
         
         // Fallback to hardcoded station names
-        setDepartureStation({ id: departureStationId, name: `Station ${departureStationId}` });
-        setArrivalStation({ id: arrivalStationId, name: `Station ${arrivalStationId}` });
+        setDepartureStation({ id: departureStationId, station_name: `Station ${departureStationId}` });
+        setArrivalStation({ id: arrivalStationId, station_name: `Station ${arrivalStationId}` });
       }
     };
     
     fetchStationDetails();
   }, [departureStationId, arrivalStationId, navigate]);
   
-  const handleSeatSelect = (seatId) => {
+  const handleSeatSelect = (seatId, seatDetails) => {
     setSelectedSeatId(seatId);
+    setSelectedSeatDetails(seatDetails);
   };
   
   const handleConfirmBooking = async () => {
@@ -79,16 +81,31 @@ const SeatChooser = () => {
       const user = JSON.parse(userJson);
       const userId = user.id;
       
-      // Create the booking - no travel date
-      await axios.post('/api/bookings/create', {
+      // Create the booking
+      const response = await axios.post('/api/bookings/create', {
         userId,
         departureStationId: parseInt(departureStationId),
         arrivalStationId: parseInt(arrivalStationId),
         seatId: selectedSeatId
       });
+
+      // Store booking details for the confirmation page
+      const bookingDetails = {
+        bookingId: response.data.id,
+        departureStation: departureStation.station_name,
+        arrivalStation: arrivalStation.station_name,
+        seatNumber: selectedSeatDetails.seat_number,
+        carNumber: selectedSeatDetails.car_number,
+        userId: userId
+      };
       
-      // Redirect to booking confirmation page
-      navigate('/booking-confirmation');
+      // Save to localStorage as fallback mechanism
+      localStorage.setItem('recentBooking', JSON.stringify(bookingDetails));
+      
+      // Navigate to booking confirmation page with the details
+      navigate('/booking-confirmation', { 
+        state: { bookingDetails }
+      });
     } catch (err) {
       console.error('Error creating booking:', err);
       setError(err.response?.data?.message || 'Error creating booking');
@@ -101,12 +118,6 @@ const SeatChooser = () => {
       <Navbar />
       <div className="seat-chooser-container">
         <h2>Choose Your Seat</h2>
-        
-        {departureStation && arrivalStation && (
-          <div className="journey-details">
-            <h3>Journey: {departureStation.name || `Station ${departureStationId}`} to {arrivalStation.name || `Station ${arrivalStationId}`}</h3>
-          </div>
-        )}
         
         <div className='back-div'>
           <Link to="/station-select">
@@ -123,7 +134,7 @@ const SeatChooser = () => {
         
         {selectedSeatId && (
           <div className="selected-seat-info">
-            <p>You have selected Seat #{selectedSeatId}</p>
+            <p>You have selected Seat #{selectedSeatDetails?.seat_number}</p>
           </div>
         )}
         

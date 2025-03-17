@@ -8,6 +8,7 @@ const SeatLayout = ({ onSeatSelect }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [selectedSeatId, setSelectedSeatId] = useState(null);
+  const location = useLocation();
   const queryParams = new URLSearchParams(location.search);
   const departureStationId = queryParams.get('departureStationId');
   const arrivalStationId = queryParams.get('arrivalStationId');
@@ -78,10 +79,10 @@ const SeatLayout = ({ onSeatSelect }) => {
     // Toggle selection
     if (selectedSeatId === seat.id) {
       setSelectedSeatId(null);
-      onSeatSelect(null);
+      onSeatSelect(null, null);
     } else {
       setSelectedSeatId(seat.id);
-      onSeatSelect(seat.id);
+      onSeatSelect(seat.id, seat); // Pass the entire seat object
     }
   };
   

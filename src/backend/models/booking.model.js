@@ -4,11 +4,10 @@ const Booking = {
   async create(userId, departureStationId, arrivalStationId, seatId) {
     const query = `
       INSERT INTO bookings 
-      (user_id, departure_station_id, arrival_station_id, seat_id) 
-      VALUES ($1, $2, $3, $4) 
+      (user_id, departure_station_id, arrival_station_id, seat_id, status) 
+      VALUES ($1, $2, $3, $4, 'active') 
       RETURNING *`;
       
-    // Remove travelDate from values - it's not in the SQL query
     const values = [userId, departureStationId, arrivalStationId, seatId];
     const { rows } = await pool.query(query, values);
     return rows[0];
@@ -18,8 +17,8 @@ const Booking = {
     const query = `
       SELECT 
         b.*,
-        d.name as departure_station,
-        a.name as arrival_station,
+        d.station_name as departure_station,
+        a.station_name as arrival_station,
         s.seat_number
       FROM bookings b
       JOIN stations d ON b.departure_station_id = d.id

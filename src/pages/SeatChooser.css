@@ -42,3 +42,8 @@ h2 {
     box-shadow: 0 6px 8px rgba(0,0,0,0.24), 0 13px 23px rgba(0,0,0,0.19);
     opacity: 0.85;
 }
+.selected-seat-info {
+    text-align: center;
+    color: rgb(14, 120, 120);
+    font-size: 20px;
+}

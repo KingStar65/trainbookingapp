@@ -3,15 +3,23 @@ import './SeatLayout.css';
 import axios from 'axios';
 import { useLocation } from 'react-router-dom';
 
-const SeatLayout = ({ onSeatSelect }) => {
+const SeatLayout = ({ onSeatSelect, selectedSeatIds: externalSelectedSeatIds }) => {
   const [seats, setSeats] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [selectedSeatId, setSelectedSeatId] = useState(null);
+  const [selectedSeatIds, setSelectedSeatIds] = useState([]);
+  const [availableSeats, setAvailableSeats] = useState([]);
   const location = useLocation();
   const queryParams = new URLSearchParams(location.search);
   const departureStationId = queryParams.get('departureStationId');
   const arrivalStationId = queryParams.get('arrivalStationId');
+  
+  // Sync internal state with external state
+  useEffect(() => {
+    if (externalSelectedSeatIds) {
+      setSelectedSeatIds(externalSelectedSeatIds);
+    }
+  }, [externalSelectedSeatIds]);
   
   useEffect(() => {
     const fetchAvailableSeats = async () => {
@@ -28,6 +36,10 @@ const SeatLayout = ({ onSeatSelect }) => {
         });
         
         console.log('Seat data received:', response.data);
+        
+        // Extract all available seats for the auto-choose feature
+        const allAvailableSeats = response.data.filter(seat => seat.is_available);
+        setAvailableSeats(allAvailableSeats);
         
         // Group seats by car number
         const groupedSeats = {};
@@ -48,6 +60,9 @@ const SeatLayout = ({ onSeatSelect }) => {
         
         setSeats(sortedGroupedSeats);
         setLoading(false);
+        
+        // Pass all available seats to parent component
+        onSeatSelect(selectedSeatIds, getSelectedSeatsDetails(selectedSeatIds), allAvailableSeats);
       } catch (err) {
         console.error('Error fetching seats:', err);
         setError(err.message || 'Error fetching seats');
@@ -55,35 +70,64 @@ const SeatLayout = ({ onSeatSelect }) => {
         
         // Fallback to hardcoded sample seats for testing UI
         const sampleSeats = {};
+        const sampleAvailableSeats = [];
+        
         for (let car = 1; car <= 2; car++) {
           sampleSeats[car] = [];
           for (let i = 1; i <= 10; i++) {
-            sampleSeats[car].push({
+            const isAvailable = Math.random() > 0.3; // 70% seats available
+            const seat = {
               id: (car - 1) * 10 + i,
-              seat_number: `${car}-${i}`,
+              seat_number: `${i}`,
               car_number: car,
-              is_available: Math.random() > 0.3 // 70% seats available
-            });
+              is_available: isAvailable
+            };
+            
+            sampleSeats[car].push(seat);
+            
+            if (isAvailable) {
+              sampleAvailableSeats.push(seat);
+            }
           }
         }
+        
         setSeats(sampleSeats);
+        setAvailableSeats(sampleAvailableSeats);
+        
+        // Pass the sample available seats to parent
+        onSeatSelect(selectedSeatIds, getSelectedSeatsDetails(selectedSeatIds), sampleAvailableSeats);
       }
     };
     
     fetchAvailableSeats();
   }, [departureStationId, arrivalStationId]);
   
+  const getSelectedSeatsDetails = (seatIds) => {
+    const selectedSeatsDetails = [];
+    Object.values(seats).flat().forEach(s => {
+      if (seatIds.includes(s.id)) {
+        selectedSeatsDetails.push(s);
+      }
+    });
+    return selectedSeatsDetails;
+  };
+  
   const handleSeatClick = (seat) => {
     if (!seat.is_available) return; // Don't allow selection of unavailable seats
     
     // Toggle selection
-    if (selectedSeatId === seat.id) {
-      setSelectedSeatId(null);
-      onSeatSelect(null, null);
+    let updatedSelectedSeats;
+    if (selectedSeatIds.includes(seat.id)) {
+      updatedSelectedSeats = selectedSeatIds.filter(id => id !== seat.id);
     } else {
-      setSelectedSeatId(seat.id);
-      onSeatSelect(seat.id, seat); // Pass the entire seat object
+      updatedSelectedSeats = [...selectedSeatIds, seat.id];
     }
+    
+    setSelectedSeatIds(updatedSelectedSeats);
+    
+    // Get full details of all selected seats and pass to parent
+    const selectedSeatsDetails = getSelectedSeatsDetails(updatedSelectedSeats);
+    onSeatSelect(updatedSelectedSeats, selectedSeatsDetails, availableSeats);
   };
   
   if (loading) return <div className="loading">Loading seats...</div>;
@@ -91,10 +135,6 @@ const SeatLayout = ({ onSeatSelect }) => {
   
   return (
     <div className="seat-layout-container">
-      <div className="journey-info">
-        <h3>Journey from Station {departureStationId} to Station {arrivalStationId}</h3>
-      </div>
-    
       <div className="legend">
         <div className="legend-item">
           <div className="seat-icon available"></div>
@@ -110,6 +150,10 @@ const SeatLayout = ({ onSeatSelect }) => {
         </div>
       </div>
       
+      <div className="multi-seat-info">
+        You can select multiple seats by clicking on them
+      </div>
+      
       {Object.keys(seats).length === 0 ? (
         <div className="no-seats">No seats found for this journey.</div>
       ) : (
@@ -120,7 +164,7 @@ const SeatLayout = ({ onSeatSelect }) => {
               {carSeats.map(seat => (
                 <div 
                   key={seat.id}
-                  className={`seat ${!seat.is_available ? 'unavailable' : ''} ${selectedSeatId === seat.id ? 'selected' : ''}`}
+                  className={`seat ${!seat.is_available ? 'unavailable' : ''} ${selectedSeatIds.includes(seat.id) ? 'selected' : ''}`}
                   onClick={() => handleSeatClick(seat)}
                 >
                   {seat.seat_number}

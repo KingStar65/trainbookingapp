@@ -4,15 +4,16 @@ import axios from 'axios';
 import SeatLayout from '../components/SeatLayout';
 import Navbar from '../components/Navbar';
 import './SeatChooser.css';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, X } from 'lucide-react';
 
 const SeatChooser = () => {
-  const [selectedSeatId, setSelectedSeatId] = useState(null);
-  const [selectedSeatDetails, setSelectedSeatDetails] = useState(null);
+  const [selectedSeatIds, setSelectedSeatIds] = useState([]);
+  const [selectedSeatsDetails, setSelectedSeatsDetails] = useState([]);
   const [departureStation, setDepartureStation] = useState(null);
   const [arrivalStation, setArrivalStation] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [availableSeats, setAvailableSeats] = useState([]);
   
   const navigate = useNavigate();
   const location = useLocation();
@@ -56,14 +57,15 @@ const SeatChooser = () => {
     fetchStationDetails();
   }, [departureStationId, arrivalStationId, navigate]);
   
-  const handleSeatSelect = (seatId, seatDetails) => {
-    setSelectedSeatId(seatId);
-    setSelectedSeatDetails(seatDetails);
+  const handleSeatSelect = (seatIds, seatsDetails, allAvailableSeats) => {
+    setSelectedSeatIds(seatIds);
+    setSelectedSeatsDetails(seatsDetails);
+    setAvailableSeats(allAvailableSeats || []);
   };
   
   const handleConfirmBooking = async () => {
-    if (!selectedSeatId || !departureStationId || !arrivalStationId) {
-      setError('Please select a seat');
+    if (!selectedSeatIds.length || !departureStationId || !arrivalStationId) {
+      setError('Please select at least one seat');
       return;
     }
     
@@ -81,21 +83,30 @@ const SeatChooser = () => {
       const user = JSON.parse(userJson);
       const userId = user.id;
       
-      // Create the booking
-      const response = await axios.post('/api/bookings/create', {
-        userId,
-        departureStationId: parseInt(departureStationId),
-        arrivalStationId: parseInt(arrivalStationId),
-        seatId: selectedSeatId
-      });
-
+      // Create bookings for all selected seats
+      const bookingPromises = selectedSeatIds.map(seatId => 
+        axios.post('/api/bookings/create', {
+          userId,
+          departureStationId: parseInt(departureStationId),
+          arrivalStationId: parseInt(arrivalStationId),
+          seatId: seatId
+        })
+      );
+      
+      const responses = await Promise.all(bookingPromises);
+      
+      // Extract booking IDs
+      const bookingIds = responses.map(response => response.data.id);
+      
       // Store booking details for the confirmation page
       const bookingDetails = {
-        bookingId: response.data.id,
+        bookingIds: bookingIds,
         departureStation: departureStation.station_name,
         arrivalStation: arrivalStation.station_name,
-        seatNumber: selectedSeatDetails.seat_number,
-        carNumber: selectedSeatDetails.car_number,
+        seats: selectedSeatsDetails.map(seat => ({
+          seatNumber: seat.seat_number,
+          carNumber: seat.car_number
+        })),
         userId: userId
       };
       
@@ -113,28 +124,72 @@ const SeatChooser = () => {
     }
   };
   
+  const removeSeat = (seatId) => {
+    const newSelectedSeatIds = selectedSeatIds.filter(id => id !== seatId);
+    const newSelectedSeatsDetails = selectedSeatsDetails.filter(seat => seat.id !== seatId);
+    
+    setSelectedSeatIds(newSelectedSeatIds);
+    setSelectedSeatsDetails(newSelectedSeatsDetails);
+  };
+  
+  const handleAutoChoose = () => {
+    if (availableSeats.length === 0) {
+      setError('No available seats to auto-choose');
+      return;
+    }
+    
+    // Select the first available seat
+    const firstAvailableSeat = availableSeats[0];
+    setSelectedSeatIds([firstAvailableSeat.id]);
+    setSelectedSeatsDetails([firstAvailableSeat]);
+  };
+  
   return (
     <>
       <Navbar />
       <div className="seat-chooser-container">
-        <h2>Choose Your Seat</h2>
+        <h2>Choose Your Seats</h2>
         
         <div className='back-div'>
-          <Link to="/station-select">
-            <button className='back-btn'>
-              <ArrowLeft size={14} />
+         <Link to="/station-select" className="back-btn">
+            <ArrowLeft size={16} />
               Back to Stations
-            </button>
-          </Link>
+         </Link>
         </div>
-        
+        <div className="journey-info">
+        <h3>Journey from Station {departureStationId} to Station {arrivalStationId}</h3>
+      </div>
+        <div className="seat-selection-actions">
+          <button 
+            className="auto-choose-btn"
+            onClick={handleAutoChoose}
+          >
+            Auto Choose Seat
+          </button>
+        </div>
         <SeatLayout 
           onSeatSelect={handleSeatSelect} 
+          selectedSeatIds={selectedSeatIds}
         />
         
-        {selectedSeatId && (
-          <div className="selected-seat-info">
-            <p>You have selected Seat #{selectedSeatDetails?.seat_number}</p>
+    
+        
+        {selectedSeatIds.length > 0 && (
+          <div className="selected-seats-summary">
+            <h3>Selected Seats ({selectedSeatIds.length})</h3>
+            <div className="selected-seats-list">
+              {selectedSeatsDetails.map(seat => (
+                <div key={seat.id} className="selected-seat-item">
+                  <span>Car {seat.car_number}, Seat {seat.seat_number}</span>
+                  <button 
+                    className="remove-seat-btn" 
+                    onClick={() => removeSeat(seat.id)}
+                  >
+                    <X size={16} />
+                  </button>
+                </div>
+              ))}
+            </div>
           </div>
         )}
         
@@ -146,11 +201,11 @@ const SeatChooser = () => {
         
         <div className='container'>
           <button 
-            className={`confirm-btn ${(!selectedSeatId || isLoading) ? 'disabled' : ''}`}
+            className={`confirm-btn ${(!selectedSeatIds.length || isLoading) ? 'disabled' : ''}`}
             onClick={handleConfirmBooking}
-            disabled={!selectedSeatId || isLoading}
+            disabled={!selectedSeatIds.length || isLoading}
           >
-            {isLoading ? 'Processing...' : 'Confirm Booking'}
+            {isLoading ? 'Processing...' : `Confirm Booking (${selectedSeatIds.length} seat${selectedSeatIds.length !== 1 ? 's' : ''})`}
           </button>
         </div>
       </div>

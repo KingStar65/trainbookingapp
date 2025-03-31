@@ -55,7 +55,10 @@ const SeatLayout = ({ onSeatSelect, selectedSeatIds: externalSelectedSeatIds }) 
         Object.keys(groupedSeats)
           .sort((a, b) => parseInt(a) - parseInt(b))
           .forEach(key => {
-            sortedGroupedSeats[key] = groupedSeats[key];
+            // Sort seats within each car by seat number
+            sortedGroupedSeats[key] = groupedSeats[key].sort(
+              (a, b) => parseInt(a.seat_number) - parseInt(b.seat_number)
+            );
           });
         
         setSeats(sortedGroupedSeats);

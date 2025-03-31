@@ -14,6 +14,7 @@ const SeatChooser = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
   const [availableSeats, setAvailableSeats] = useState([]);
+  const [seatCount, setSeatCount] = useState(1);
   
   const navigate = useNavigate();
   const location = useLocation();
@@ -61,6 +62,135 @@ const SeatChooser = () => {
     setSelectedSeatIds(seatIds);
     setSelectedSeatsDetails(seatsDetails);
     setAvailableSeats(allAvailableSeats || []);
+  };
+  
+  const findContiguousSeats = (seats, count) => {
+    // Parse seat numbers to identify row and column
+    const parsedSeats = seats.map(seat => {
+      const seatNum = seat.seat_number.toString();
+      
+      // Assuming seat format like "1A", "2B", etc.
+      // Extract row number and column letter
+      const row = seatNum.match(/\d+/) ? seatNum.match(/\d+/)[0] : '';
+      const col = seatNum.match(/[A-Z]+/i) ? seatNum.match(/[A-Z]+/i)[0].toUpperCase() : '';
+      
+      return {
+        ...seat,
+        row,
+        col
+      };
+    });
+
+    // Group seats by car and row
+    const seatsByCarAndRow = {};
+    parsedSeats.forEach(seat => {
+      const key = `${seat.car_number}-${seat.row}`;
+      if (!seatsByCarAndRow[key]) {
+        seatsByCarAndRow[key] = [];
+      }
+      seatsByCarAndRow[key].push(seat);
+    });
+
+    // Define column order (assuming standard A, B, C, D ordering)
+    const colOrder = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
+    
+    // Look for contiguous seats in the same row of each car
+    for (const carRowKey in seatsByCarAndRow) {
+      const rowSeats = seatsByCarAndRow[carRowKey];
+      
+      // Sort by column within the row
+      rowSeats.sort((a, b) => colOrder.indexOf(a.col) - colOrder.indexOf(b.col));
+      
+      // Find contiguous block of seats (adjacent columns)
+      for (let i = 0; i <= rowSeats.length - count; i++) {
+        const candidate = rowSeats.slice(i, i + count);
+        
+        // Check if seats are truly contiguous (adjacent columns)
+        let contiguous = true;
+        for (let j = 1; j < candidate.length; j++) {
+          const prevColIndex = colOrder.indexOf(candidate[j-1].col);
+          const currColIndex = colOrder.indexOf(candidate[j].col);
+          
+          if (currColIndex !== prevColIndex + 1) {
+            contiguous = false;
+            break;
+          }
+        }
+        
+        if (contiguous) {
+          return candidate;
+        }
+      }
+    }
+    
+    // If no contiguous seats in the same row, try to find closest available seats
+    console.log("No perfectly contiguous seats found, looking for closest available");
+    
+    return null; // No contiguous seats found
+  };
+  
+  const handleAutoChoose = () => {
+    if (availableSeats.length === 0) {
+      setError('No available seats to auto-choose');
+      return;
+    }
+    
+    // Reset previously selected seats
+    setSelectedSeatIds([]);
+    setSelectedSeatsDetails([]);
+    
+    const numSeats = parseInt(seatCount);
+    
+    if (numSeats > availableSeats.length) {
+      setError(`Not enough available seats. Only ${availableSeats.length} seats available.`);
+      return;
+    }
+    
+    if (numSeats === 1) {
+      // Just select the first available seat for single seat selection
+      const firstAvailableSeat = availableSeats[0];
+      setSelectedSeatIds([firstAvailableSeat.id]);
+      setSelectedSeatsDetails([firstAvailableSeat]);
+    } else {
+      // Find contiguous seats
+      const contiguousSeats = findContiguousSeats(availableSeats, numSeats);
+      
+      if (contiguousSeats) {
+        setSelectedSeatIds(contiguousSeats.map(seat => seat.id));
+        setSelectedSeatsDetails(contiguousSeats);
+        console.log("Selected contiguous seats:", contiguousSeats.map(s => s.seat_number).join(", "));
+      } else {
+        // Fallback: If no contiguous seats available, try to find seats in the same car at least
+        const seatsByCarNumber = {};
+        availableSeats.forEach(seat => {
+          if (!seatsByCarNumber[seat.car_number]) {
+            seatsByCarNumber[seat.car_number] = [];
+          }
+          seatsByCarNumber[seat.car_number].push(seat);
+        });
+        
+        // Find a car with enough seats
+        let selectedFromSameCar = null;
+        for (const carNumber in seatsByCarNumber) {
+          if (seatsByCarNumber[carNumber].length >= numSeats) {
+            selectedFromSameCar = seatsByCarNumber[carNumber].slice(0, numSeats);
+            break;
+          }
+        }
+        
+        if (selectedFromSameCar) {
+          setSelectedSeatIds(selectedFromSameCar.map(seat => seat.id));
+          setSelectedSeatsDetails(selectedFromSameCar);
+          setError(`Could not find ${numSeats} adjacent seats. Selected seats in the same car instead.`);
+        } else {
+          // Last resort: just pick the first N available seats
+          const firstNSeats = availableSeats.slice(0, numSeats);
+          setSelectedSeatIds(firstNSeats.map(seat => seat.id));
+          setSelectedSeatsDetails(firstNSeats);
+          setError(`Could not find ${numSeats} adjacent seats. Selected first available seats instead.`);
+        }
+      }
+    }
   };
   
   const handleConfirmBooking = async () => {
@@ -132,23 +262,11 @@ const SeatChooser = () => {
     setSelectedSeatsDetails(newSelectedSeatsDetails);
   };
   
-  const handleAutoChoose = () => {
-    if (availableSeats.length === 0) {
-      setError('No available seats to auto-choose');
-      return;
-    }
-    
-    // Select the first available seat
-    const firstAvailableSeat = availableSeats[0];
-    setSelectedSeatIds([firstAvailableSeat.id]);
-    setSelectedSeatsDetails([firstAvailableSeat]);
-  };
-  
   return (
     <>
       <Navbar />
       <div className="seat-chooser-container">
-        <h2>Choose Your Seats</h2>
+        <h1>Choose Your Seats</h1>
         
         <div className='back-div'>
          <Link to="/station-select" className="back-btn">
@@ -157,22 +275,35 @@ const SeatChooser = () => {
          </Link>
         </div>
         <div className="journey-info">
-        <h3>Journey from Station {departureStationId} to Station {arrivalStationId}</h3>
-      </div>
-        <div className="seat-selection-actions">
-          <button 
-            className="auto-choose-btn"
-            onClick={handleAutoChoose}
-          >
-            Auto Choose Seat
-          </button>
+          <h3>Journey from {departureStation?.station_name || `Station ${departureStationId}`} to {arrivalStation?.station_name || `Station ${arrivalStationId}`}</h3>
         </div>
+        
+        <div className="seat-selection-actions">
+          <div className="auto-choose-container">
+            <select 
+              className="seat-count-select"
+              value={seatCount}
+              onChange={(e) => setSeatCount(e.target.value)}
+            >
+              {[1, 2, 3, 4, 5].map(count => (
+                <option key={count} value={count}>
+                  {count} {count === 1 ? 'seat' : 'seats'}
+                </option>
+              ))}
+            </select>
+            <button 
+              className="auto-choose-btn"
+              onClick={handleAutoChoose}
+            >
+              Auto Choose Seats
+            </button>
+          </div>
+        </div>
+        
         <SeatLayout 
           onSeatSelect={handleSeatSelect} 
           selectedSeatIds={selectedSeatIds}
         />
-        
-    
         
         {selectedSeatIds.length > 0 && (
           <div className="selected-seats-summary">

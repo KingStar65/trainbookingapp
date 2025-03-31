@@ -2,8 +2,9 @@ body {
     margin: 0;
 }
 
-h2 {
+h1 {
     text-align: center;
+    font-weight: 700;
 }
 
 .seat-choose {
@@ -154,6 +155,31 @@ h2 {
     justify-content: center;
     margin: 1rem 0;
   }
+  .auto-choose-container {
+    display: flex;
+    align-items: center;
+    background-color: #f5f5f5;
+    border-radius: 8px;
+    padding: 8px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+}
+
+.seat-count-select {
+    padding: 8px 12px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 0.95rem;
+    margin-right: 10px;
+    background-color: white;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.seat-count-select:focus {
+    outline: none;
+    border-color: #00bcd4;
+    box-shadow: 0 0 0 2px rgba(0,188,212,0.2);
+}
   
 .auto-choose-btn {
     background-color: #bbd118;

@@ -37,7 +37,7 @@ const Home = () => {
       <Navbar />
       <div className='welcome'>
         <h2>Welcome to the train booking website</h2>
-        <p>This line goes from station 1 to station 8</p>
+        <p>This line goes from station 1 to station 6</p>
         
         <div className="home-actions">
           {isLoggedIn ? (

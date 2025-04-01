@@ -135,7 +135,7 @@ const SeatLayout = ({ onSeatSelect, selectedSeatIds: externalSelectedSeatIds }) 
   
   if (loading) return <div className="loading">Loading seats...</div>;
   if (error) return <div className="error">Error: {error}</div>;
-  
+
   return (
     <div className="seat-layout-container">
       <div className="legend">

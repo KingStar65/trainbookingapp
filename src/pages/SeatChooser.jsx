@@ -285,7 +285,7 @@ const SeatChooser = () => {
               value={seatCount}
               onChange={(e) => setSeatCount(e.target.value)}
             >
-              {[1, 2, 3, 4, 5].map(count => (
+              {[1, 2, 3, 4].map(count => (
                 <option key={count} value={count}>
                   {count} {count === 1 ? 'seat' : 'seats'}
                 </option>

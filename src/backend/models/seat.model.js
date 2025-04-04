@@ -19,6 +19,7 @@ const Seat = {
       SELECT COUNT(*) AS booking_count
       FROM bookings
       WHERE seat_id = $1
+      AND status = 'active'
       AND (
         -- Check if this booking overlaps with the requested journey
         -- Case 1: The existing booking's departure is within our journey
@@ -43,6 +44,7 @@ const Seat = {
         (CASE WHEN EXISTS (
           SELECT 1 FROM bookings b
           WHERE b.seat_id = s.id
+          AND b.status = 'active'
           AND (
             -- Same overlap logic as in checkSeatAvailability
             (b.departure_station_id >= $1 AND b.departure_station_id < $2) OR
@@ -56,6 +58,64 @@ const Seat = {
     
     const { rows } = await pool.query(query, [departureStationId, arrivalStationId]);
     return rows;
+  },
+  
+  async bookSeatWithTransaction(userId, departureStationId, arrivalStationId, seatId) {
+    const client = await pool.connect();
+    
+    try {
+      // Start transaction
+      await client.query('BEGIN');
+      
+      // First check if the seat is still available (with FOR UPDATE to lock the row)
+      const availabilityQuery = `
+        SELECT EXISTS (
+          SELECT 1 FROM bookings
+          WHERE seat_id = $1
+          AND status = 'active'
+          AND (
+            (departure_station_id >= $2 AND departure_station_id < $3) OR
+            (arrival_station_id > $2 AND arrival_station_id <= $3) OR
+            (departure_station_id <= $2 AND arrival_station_id >= $3)
+          )
+          FOR UPDATE
+        ) AS is_booked
+      `;
+      
+      const availabilityResult = await client.query(availabilityQuery, [
+        seatId, departureStationId, arrivalStationId
+      ]);
+      
+      const isBooked = availabilityResult.rows[0].is_booked;
+      
+      if (isBooked) {
+        throw new Error('Selected seat is no longer available');
+      }
+      
+      // If the seat is available, proceed with booking
+      const insertQuery = `
+        INSERT INTO bookings 
+        (user_id, departure_station_id, arrival_station_id, seat_id, status) 
+        VALUES ($1, $2, $3, $4, 'active') 
+        RETURNING *
+      `;
+      
+      const insertResult = await client.query(insertQuery, [
+        userId, departureStationId, arrivalStationId, seatId
+      ]);
+      
+      // Commit the transaction
+      await client.query('COMMIT');
+      
+      return insertResult.rows[0];
+    } catch (error) {
+      // Rollback in case of error
+      await client.query('ROLLBACK');
+      throw error;
+    } finally {
+      // Release the client back to the pool
+      client.release();
+    }
   }
 };
 

@@ -1,4 +1,4 @@
-import Booking from '../models/booking.model.js';
+import BookingService from '../services/booking.service.js';
 import Seat from '../models/seat.model.js';
 
 const bookingController = {
@@ -11,30 +11,56 @@ const bookingController = {
         return res.status(400).json({ message: 'All fields are required' });
       }
       
-      // Check if seat is available for this journey
-      const isAvailable = await Seat.checkSeatAvailability(
-        seatId, 
+      // Use the transactional method to book the seat
+      const booking = await Seat.bookSeatWithTransaction(
+        userId, 
         departureStationId, 
-        arrivalStationId
-      );
-      
-      if (!isAvailable) {
-        return res.status(400).json({ 
-          message: 'Selected seat is not available for this journey'
-        });
-      }
-      
-      // Create booking
-      const booking = await Booking.create(
-        userId,
-        departureStationId,
-        arrivalStationId,
+        arrivalStationId, 
         seatId
       );
       
       res.status(201).json(booking);
     } catch (error) {
       console.error('Booking error:', error);
+      
+      // Send appropriate error message based on the error type
+      if (error.message.includes('no longer available')) {
+        return res.status(409).json({ 
+          message: 'This seat was just booked by another user. Please select a different seat.'
+        });
+      }
+      
+      res.status(500).json({ message: error.message });
+    }
+  },
+  
+  async createMultipleBookings(req, res) {
+    try {
+      const { userId, departureStationId, arrivalStationId, seatIds } = req.body;
+      
+      // Validate input
+      if (!userId || !departureStationId || !arrivalStationId || !seatIds || !seatIds.length) {
+        return res.status(400).json({ message: 'All fields are required' });
+      }
+      
+      // Use the booking service to create multiple bookings in a transaction
+      const bookings = await BookingService.createMultipleBookings(
+        userId,
+        departureStationId,
+        arrivalStationId,
+        seatIds
+      );
+      
+      res.status(201).json(bookings);
+    } catch (error) {
+      console.error('Multiple booking error:', error);
+      
+      if (error.message.includes('no longer available')) {
+        return res.status(409).json({ 
+          message: error.message
+        });
+      }
+      
       res.status(500).json({ message: error.message });
     }
   },
@@ -47,7 +73,7 @@ const bookingController = {
         return res.status(400).json({ message: 'User ID is required' });
       }
       
-      const bookings = await Booking.findByUser(userId);
+      const bookings = await BookingService.getUserBookings(userId);
       res.json(bookings);
     } catch (error) {
       console.error('Get bookings error:', error);
@@ -58,20 +84,22 @@ const bookingController = {
   async cancelBooking(req, res) {
     try {
       const { bookingId } = req.params;
+      const userId = req.body.userId || req.user?.id;
       
-      if (!bookingId) {
-        return res.status(400).json({ message: 'Booking ID is required' });
+      if (!bookingId || !userId) {
+        return res.status(400).json({ message: 'Booking ID and User ID are required' });
       }
       
-      const updatedBooking = await Booking.updateStatus(bookingId, 'cancelled');
-      
-      if (!updatedBooking) {
-        return res.status(404).json({ message: 'Booking not found' });
-      }
+      const updatedBooking = await BookingService.cancelBooking(bookingId, userId);
       
       res.json(updatedBooking);
     } catch (error) {
       console.error('Cancel booking error:', error);
+      
+      if (error.message.includes('not found') || error.message.includes('not authorized')) {
+        return res.status(404).json({ message: error.message });
+      }
+      
       res.status(500).json({ message: error.message });
     }
   }

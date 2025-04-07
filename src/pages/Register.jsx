@@ -9,7 +9,7 @@ const Register = () => {
     username: '',
     email: '',
     password: '',
-    confirmPassword: '' // Added for password confirmation
+    confirmPassword: '' 
   });
   const [error, setError] = useState('');
   const navigate = useNavigate();
@@ -18,7 +18,6 @@ const Register = () => {
     e.preventDefault();
     setError('');
 
-    // Validate passwords match
     if (formData.password !== formData.confirmPassword) {
       setError('Passwords do not match');
       return;
@@ -42,8 +41,6 @@ const Register = () => {
       if (!response.ok) {
         throw new Error(data.message || 'Registration failed');
       }
-
-      // Registration successful, navigate to login
       navigate('/login');
     } catch (err) {
       setError(err.message);

@@ -1,4 +1,5 @@
-import pool from '../db.config.js'
+import pool from '../db.config.js';
+import bcrypt from 'bcrypt';
 
 const User = {
   async create(username, email, password) {
@@ -17,13 +18,17 @@ const User = {
         throw new Error('Email already registered');
       }
 
-      // If both checks pass, create the user
+      // Hash password before storing
+      const saltRounds = 10;
+      const hashedPassword = await bcrypt.hash(password, saltRounds);
+
+      // If both checks pass, create the user with hashed password
       const insertQuery = `
         INSERT INTO users (username, email, password_enc) 
         VALUES ($1, $2, $3) 
         RETURNING id, username, email, created_at`;
       
-      const values = [username, email, password];
+      const values = [username, email, hashedPassword];
       const { rows } = await pool.query(insertQuery, values);
       
       return rows[0];

@@ -1,32 +1,34 @@
 import jwt from 'jsonwebtoken';
 import User from '../models/user.model.js';
+import bcrypt from 'bcrypt';
 
 const authController = {
   async login(req, res) {
     try {
       const { email, password } = req.body;
-      console.log('Attempting login with:', { email, password });
-
+      
       // Find user
       const user = await User.findByEmail(email);
       if (!user) {
         return res.status(400).json({ message: 'User not found' });
       }
 
-      console.log('User found:', { 
-        providedPassword: password,
-        storedPassword: user.password_enc 
-      });
-
-      // Simple password check (for testing only)
-      if (password !== user.password_enc) {  
+      // Compare passwords using bcrypt
+      const passwordMatch = await bcrypt.compare(password, user.password_enc);
+      if (!passwordMatch) {
         return res.status(400).json({ message: 'Invalid password' });
       }
 
-      // Generate JWT
+      // Check if JWT_SECRET is configured
+      if (!process.env.JWT_SECRET) {
+        console.error('JWT_SECRET not configured in environment');
+        return res.status(500).json({ message: 'Server configuration error' });
+      }
+
+      // Generate JWT using only the environment variable
       const token = jwt.sign(
         { id: user.id },
-        process.env.JWT_SECRET || 'your_jwt_secret',
+        process.env.JWT_SECRET,
         { expiresIn: '1d' }
       );
 
@@ -43,18 +45,16 @@ const authController = {
       res.status(500).json({ message: error.message });
     }
   },
+
   async register(req, res) {
     try {
       const { username, email, password } = req.body;
-      console.log('Attempting registration with:', { username, email });
-
-      // Create new user
+      
       const newUser = await User.create(username, email, password);
 
-      // Generate JWT
       const token = jwt.sign(
         { id: newUser.id },
-        process.env.JWT_SECRET || 'your_jwt_secret',
+        process.env.JWT_SECRET,
         { expiresIn: '1d' }
       );
 

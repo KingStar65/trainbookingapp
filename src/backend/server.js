@@ -6,16 +6,14 @@ import stationRoutes from './routes/station.routes.js';
 import seatRoutes from './routes/seat.routes.js';
 import bookingRoutes from './routes/booking.routes.js';
 
-dotenv.config();
-const app = express();
+dotenv.config(); //loads the environment variables
+const app = express(); 
 
-// Middleware
 app.use(cors({
-  origin: 'http://localhost:5173' // Your Vite dev server port
+  origin: 'http://localhost:5173' 
 }));
 app.use(express.json());
 
-// Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/stations', stationRoutes);
 app.use('/api/seats', seatRoutes);

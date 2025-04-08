@@ -5,7 +5,7 @@ import Register from './pages/Register';
 import SeatChooser from './pages/SeatChooser';
 import Navbar from './components/Navbar'
 import StationSelect from './components/StationSelect';
-import Bookings from './pages/bookings'
+import Bookings from './pages/Bookings';
 import Confirmation from './pages/Confirmation';
 
 function App() {

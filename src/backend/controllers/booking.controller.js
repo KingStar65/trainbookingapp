@@ -37,6 +37,11 @@ const bookingController = {
   async createMultipleBookings(req, res) {
     try {
       const { userId, departureStationId, arrivalStationId, seatIds } = req.body;
+      
+      if (!userId || !departureStationId || !arrivalStationId || !seatIds || !seatIds.length) {
+        return res.status(400).json({ message: 'All fields are required' });
+      }
+      
       // Use the booking service to create multiple bookings in a transaction
       const bookings = await BookingService.createMultipleBookings(
         userId,
@@ -44,9 +49,18 @@ const bookingController = {
         parseInt(arrivalStationId),
         seatIds.map(id => parseInt(id))
       );
+      
       res.status(201).json(bookings);
     } catch (error) {
       console.error('Multiple booking error:', error);
+      // Send appropriate error message
+      if (error.message.includes('no longer available')) {
+        return res.status(409).json({ 
+          message: 'Some seats were just booked by another user. Please select different seats.'
+        });
+      }
+      
+      res.status(500).json({ message: error.message || 'An error occurred during booking' });
     }
   },
   
@@ -74,8 +88,7 @@ const bookingController = {
       if (!bookingId || !userId) {
         return res.status(400).json({ message: 'Booking ID and User ID are required' });
       }
-      
-      const updatedBooking = await BookingService.cancelBooking(
+      const updatedBooking = await Booking.cancelBooking(
         parseInt(bookingId), 
         parseInt(userId)
       );

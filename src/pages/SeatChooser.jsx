@@ -179,20 +179,35 @@ const SeatChooser = () => {
       const user = JSON.parse(userJson);
       const userId = user.id;
       
-      // Create bookings for all selected seats
-      const bookingPromises = selectedSeatIds.map(seatId => 
-        axios.post('/api/bookings/create', {
+      let bookingIds = [];
+      
+      // Use different endpoints based on the number of seats selected
+      if (selectedSeatIds.length === 1) {
+        // For single seat booking, use the createBooking endpoint
+        const response = await axios.post('/api/bookings/create', {
           userId,
           departureStationId: parseInt(departureStationId),
           arrivalStationId: parseInt(arrivalStationId),
-          seatId: seatId
-        })
-      );
-      
-      const responses = await Promise.all(bookingPromises);
-      
-      // Extract booking IDs
-      const bookingIds = responses.map(response => response.data.id);
+          seatId: selectedSeatIds[0]
+        });
+        bookingIds = [response.data.id];
+      } else {
+        // For multiple seats, use the createMultipleBookings endpoint
+        const response = await axios.post('/api/bookings/multiple', {
+          userId,
+          departureStationId: parseInt(departureStationId),
+          arrivalStationId: parseInt(arrivalStationId),
+          seatIds: selectedSeatIds
+        });
+        
+        // Extract booking IDs from the response
+        if (Array.isArray(response.data)) {
+          bookingIds = response.data.map(booking => booking.id);
+          console.log('Multiple bookings created successfully with IDs:', bookingIds);
+        } else {
+          throw new Error('Unexpected response format from multiple bookings endpoint');
+        }
+      }
       
       // Store booking details for the confirmation page
       const bookingDetails = {

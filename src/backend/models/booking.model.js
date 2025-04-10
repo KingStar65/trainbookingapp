@@ -41,7 +41,6 @@ const Booking = {
         if (isBooked) {
           throw new Error('Selected seat is no longer available');
         }
-        
         // If the seat is available, proceed with booking
         const insertQuery = `
           INSERT INTO bookings 
@@ -53,10 +52,7 @@ const Booking = {
         const insertResult = await client.query(insertQuery, [
           userId, departureStationId, arrivalStationId, seatId
         ]);
-        
-        // Commit the transaction
-        await client.query('COMMIT');
-        
+        await client.query('COMMIT'); // Commit the transaction
         return insertResult.rows[0];
       } catch (error) {
         // Rollback in case of error
@@ -88,6 +84,41 @@ const Booking = {
     const query = 'UPDATE bookings SET status = $1 WHERE id = $2 RETURNING *';
     const { rows } = await pool.query(query, [status, bookingId]);
     return rows[0];
+  },
+  async cancelBooking(bookingId, userId) {
+    const client = await pool.connect();
+    try {
+      // Start transaction
+      await client.query('BEGIN');
+      // First check if the booking exists and belongs to the user
+      const checkQuery = `
+        SELECT * FROM bookings 
+        WHERE id = $1 AND user_id = $2
+        FOR UPDATE
+      `;
+      const checkResult = await client.query(checkQuery, [bookingId, userId]);
+      if (checkResult.rows.length === 0) {
+        throw new Error('Booking not found or you are not authorized to cancel it');
+      }
+      // Update booking status to cancelled
+      const updateQuery = `
+        UPDATE bookings 
+        SET status = 'cancelled'
+        WHERE id = $1 
+        RETURNING *
+      `;
+      const updateResult = await client.query(updateQuery, [bookingId]);
+      // Commit the transaction
+      await client.query('COMMIT');
+      return updateResult.rows[0];
+    } catch (error) {
+      // Rollback in case of error
+      await client.query('ROLLBACK');
+      throw error;
+    } finally {
+      // Release the client back to the pool
+      client.release();
+    }
   }
 };
 

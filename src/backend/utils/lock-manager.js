@@ -1,29 +1,17 @@
 import pool from '../db.config.js';
-
-/**
- * Lock Manager to handle database-level locking for critical operations
- * 
- * This provides an additional layer of protection against race conditions
- * beyond PostgreSQL's transaction isolation
- */
 class LockManager {
   /**
    * Acquire an advisory lock for a specific seat booking
    * 
-   * @param {number} seatId - The ID of the seat to lock
-   * @param {number} departureStationId - Departure station ID
-   * @param {number} arrivalStationId - Arrival station ID
-   * @param {object} client - PostgreSQL client from the connection pool
-   * @returns {Promise<boolean>} - True if lock acquired, false otherwise
+   * @param {number} seatId 
+   * @param {number} departureStationId 
+   * @param {number} arrivalStationId 
+   * @param {object} client 
+   * @returns {Promise<boolean>} 
    */
   static async acquireSeatLock(seatId, departureStationId, arrivalStationId, client) {
     try {
-      // Create a unique lock ID based on the seat and journey
-      // Using a hash function to create a 32-bit integer from the inputs
       const lockId = this.generateLockId(seatId, departureStationId, arrivalStationId);
-      
-      // Try to acquire PostgreSQL advisory lock
-      // pg_try_advisory_xact_lock returns true if lock acquired, false if already locked
       const { rows } = await client.query(`SELECT pg_try_advisory_xact_lock($1)`, [lockId]);
       
       return rows[0].pg_try_advisory_xact_lock;

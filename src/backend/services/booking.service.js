@@ -4,24 +4,17 @@ import LockManager from '../utils/lock-manager.js';
 class BookingService {
     async createMultipleBookings(userId, departureStationId, arrivalStationId, seatIds) {
       let client;
-    
       try {
-        // Get client with a timeout to prevent hanging connections
-        client = await getClientWithTimeout(10000);
-        
-        // Start transaction
+       // Start transaction
         await client.query('BEGIN');
-        
         // Try to acquire advisory locks on all seats
         const lockedSeatIds = await LockManager.acquireMultipleSeatLocks(
           seatIds, departureStationId, arrivalStationId, client
         );
-        
         // If not all seats could be locked, fail early
         if (lockedSeatIds.length !== seatIds.length) {
           throw new Error('Unable to secure all selected seats. Some may have been booked by another user.');
         }
-        
         // Check seat availability with FOR UPDATE to prevent race conditions
         for (const seatId of seatIds) {
           const availabilityQuery = `
@@ -157,59 +150,8 @@ class BookingService {
         }
       }
     }
-    
-    /**
-     * Get all bookings for a user with optimized query
-     */
-    async getUserBookings(userId) {
-      const query = `
-        SELECT 
-          b.*,
-          d.station_name as departure_station,
-          a.station_name as arrival_station,
-          s.seat_number,
-          s.car_number
-        FROM bookings b
-        JOIN stations d ON b.departure_station_id = d.id
-        JOIN stations a ON b.arrival_station_id = a.id
-        JOIN seats s ON b.seat_id = s.id
-        WHERE b.user_id = $1
-        ORDER BY b.created_at DESC
-      `;
-      
-      const { rows } = await pool.query(query, [userId]);
-      return rows;
-    }
-    
-    /**
-     * Get real-time seat availability with timeout for responsiveness
-     */
-    async getSeatAvailability(departureStationId, arrivalStationId) {
-      try {
-        // Use a query timeout to ensure responsiveness
-        const { rows } = await pool.query(`
-          SELECT 
-            s.id, s.seat_number, s.car_number, s.status,
-            NOT EXISTS (
-              SELECT 1 FROM bookings b
-              WHERE b.seat_id = s.id
-              AND b.status = 'active'
-              AND (
-                (b.departure_station_id >= $1 AND b.departure_station_id < $2) OR
-                (b.arrival_station_id > $1 AND b.arrival_station_id <= $2) OR
-                (b.departure_station_id <= $1 AND b.arrival_station_id >= $2)
-              )
-            ) as is_available
-          FROM seats s
-          ORDER BY s.car_number, s.seat_number
-        `, [departureStationId, arrivalStationId], { query_timeout: 5000 });
-        
-        return rows;
-      } catch (error) {
-        console.error('Error getting seat availability:', error);
-        throw error;
-      }
-    }
+
+  
   }
 
 export default new BookingService();

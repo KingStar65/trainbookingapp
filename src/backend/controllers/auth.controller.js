@@ -6,25 +6,16 @@ const authController = {
   async login(req, res) {
     try {
       const { email, password } = req.body;
-      
-      // Find user
+      // Checks if user exist
       const user = await User.findByEmail(email);
       if (!user) {
         return res.status(400).json({ message: 'User not found' });
       }
-
       // Compare passwords using bcrypt
       const passwordMatch = await bcrypt.compare(password, user.password_enc);
       if (!passwordMatch) {
         return res.status(400).json({ message: 'Invalid password' });
       }
-
-      // Check if JWT_SECRET is configured
-      if (!process.env.JWT_SECRET) {
-        console.error('JWT_SECRET not configured in environment');
-        return res.status(500).json({ message: 'Server configuration error' });
-      }
-
       // Generate JWT using only the environment variable
       const token = jwt.sign(
         { id: user.id },

@@ -1,18 +1,17 @@
 import BookingService from '../services/booking.service.js';
 import Seat from '../models/seat.model.js';
+import Booking from '../models/booking.model.js';
 
 const bookingController = {
   async createBooking(req, res) {
     try {
       const { userId, departureStationId, arrivalStationId, seatId } = req.body;
       
-      // Validate input
       if (!userId || !departureStationId || !arrivalStationId || !seatId) {
         return res.status(400).json({ message: 'All fields are required' });
       }
-      
-      // Use the transactional method to book the seat
-      const booking = await Seat.bookSeatWithTransaction(
+      // Use the transactions to book the seat
+      const booking = await Booking.bookSeatWithTransaction(
         userId, 
         departureStationId, 
         arrivalStationId, 
@@ -34,45 +33,20 @@ const bookingController = {
     }
   },
   
+  
   async createMultipleBookings(req, res) {
     try {
       const { userId, departureStationId, arrivalStationId, seatIds } = req.body;
-      
-      // Validate input
-      if (!userId || !departureStationId || !arrivalStationId || !seatIds || !seatIds.length) {
-        return res.status(400).json({ message: 'All fields are required' });
-      }
-      
-      // Validate that we're not trying to book too many seats at once
-      if (seatIds.length > 10) {
-        return res.status(400).json({ message: 'Cannot book more than 10 seats at once' });
-      }
-      
-      // Use the enhanced booking service to create multiple bookings in a transaction
+      // Use the booking service to create multiple bookings in a transaction
       const bookings = await BookingService.createMultipleBookings(
         userId,
         parseInt(departureStationId),
         parseInt(arrivalStationId),
         seatIds.map(id => parseInt(id))
       );
-      
       res.status(201).json(bookings);
     } catch (error) {
       console.error('Multiple booking error:', error);
-      
-      // Handle different error types with appropriate HTTP status codes
-      if (error.message.includes('no longer available') || 
-          error.message.includes('Unable to secure all selected seats')) {
-        return res.status(409).json({ 
-          message: error.message
-        });
-      } else if (error.message.includes('timeout')) {
-        return res.status(408).json({
-          message: 'The booking request timed out. Please try again.'
-        });
-      }
-      
-      res.status(500).json({ message: error.message });
     }
   },
   

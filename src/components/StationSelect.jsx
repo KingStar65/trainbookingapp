@@ -25,16 +25,6 @@ const StationSelect = () => {
       } catch (err) {
         console.error('Error fetching stations:', err);
         setError('Error fetching stations: ' + (err.message || 'Unknown error'));
-        
-        // Fallback to hardcoded stations if API fails
-        setStations([
-          { id: 1, name: 'Station 1' },
-          { id: 2, name: 'Station 2' },
-          { id: 3, name: 'Station 3' },
-          { id: 4, name: 'Station 4' },
-          { id: 5, name: 'Station 5' },
-          { id: 6, name: 'Station 6' }
-        ]);
         setLoading(false);
       }
     };

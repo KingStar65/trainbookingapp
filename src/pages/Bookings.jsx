@@ -16,22 +16,18 @@ const Bookings = () => {
         // Check if user is logged in
         const userJson = localStorage.getItem('user');
         const token = localStorage.getItem('token');
-        
         if (!userJson || !token) {
           setError('Please log in to view your bookings');
           setLoading(false);
           return;
         }
-
         const user = JSON.parse(userJson);
-        
         // Fetch bookings for the user
         const response = await axios.get(`/api/bookings/user-bookings?userId=${user.id}`, {
           headers: {
             Authorization: `Bearer ${token}`
           }
         });
-        
         setBookings(response.data);
         setLoading(false);
       } catch (err) {
@@ -47,25 +43,21 @@ const Bookings = () => {
   const handleCancelBooking = async (bookingId) => {
     try {
       const token = localStorage.getItem('token');
-      
       if (!token) {
         setError('Authentication required');
         return;
       }
-      
       await axios.post(`/api/bookings/${bookingId}/cancel`, {}, {
         headers: {
           Authorization: `Bearer ${token}`
         }
       });
-      
       // Refresh bookings after cancellation
       setBookings(bookings.map(booking => 
         booking.id === bookingId 
           ? { ...booking, status: 'cancelled' } 
           : booking
       ));
-      
     } catch (err) {
       console.error('Error cancelling booking:', err);
       setError('Failed to cancel booking: ' + (err.response?.data?.message || err.message));
@@ -152,7 +144,6 @@ const Bookings = () => {
                       </div>
                     </div>
                   </div>
-                  
                   <div className="booking-details">
                     <div className="detail-item">
                       <span className="detail-label">Seat</span>
@@ -160,7 +151,6 @@ const Bookings = () => {
                     </div>
                   </div>
                 </div>
-                
                 {booking.status === 'active' && (
                   <div className="booking-actions">
                     <button 

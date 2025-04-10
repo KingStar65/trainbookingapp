@@ -4,14 +4,9 @@ import LockManager from '../utils/lock-manager.js';
 class BookingService {
     async createMultipleBookings(userId, departureStationId, arrivalStationId, seatIds) {
       let client;
-    
       try {
-        // Get client with a timeout to prevent hanging connections
-        client = await getClientWithTimeout(10000);
-        
-        // Start transaction
+       // Start transaction
         await client.query('BEGIN');
-        
         // Try to acquire advisory locks on all seats
         const lockedSeatIds = await LockManager.acquireMultipleSeatLocks(
           seatIds, departureStationId, arrivalStationId, client
@@ -81,41 +76,31 @@ class BookingService {
         }
       }
     }
-    
     /**
      * Cancel a booking with proper transaction handling and locking
      */
     async cancelBooking(bookingId, userId) {
       let client;
-      
       try {
-        client = await getClientWithTimeout(5000);
         await client.query('BEGIN');
-        
         // First check if the booking exists and belongs to the user
         const checkQuery = `
           SELECT * FROM bookings 
           WHERE id = $1 AND user_id = $2
           FOR UPDATE
         `;
-        
         const checkResult = await client.query(checkQuery, [bookingId, userId]);
-        
         if (checkResult.rows.length === 0) {
           throw new Error('Booking not found or you are not authorized to cancel it');
         }
-        
         const booking = checkResult.rows[0];
-        
         // Acquire an advisory lock on the seat to prevent race conditions
         const lockAcquired = await LockManager.acquireSeatLock(
           booking.seat_id, booking.departure_station_id, booking.arrival_station_id, client
         );
-        
         if (!lockAcquired) {
           throw new Error('Unable to cancel booking at this time. Please try again.');
         }
-        
         // Update booking status to cancelled
         const updateQuery = `
           UPDATE bookings 
@@ -159,7 +144,7 @@ class BookingService {
     }
     
     /**
-     * Get all bookings for a user with optimized query
+     * Get all bookings for a user 
      */
     async getUserBookings(userId) {
       const query = `

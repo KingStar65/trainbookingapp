@@ -62,11 +62,9 @@ const Seat = {
   
   async bookSeatWithTransaction(userId, departureStationId, arrivalStationId, seatId) {
     const client = await pool.connect();
-    
     try {
       // Start transaction
       await client.query('BEGIN');
-      
       // First check if the seat is still available (with FOR UPDATE to lock the row)
       const availabilityQuery = `
         SELECT EXISTS (

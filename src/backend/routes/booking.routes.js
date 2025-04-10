@@ -5,12 +5,10 @@ import authMiddleware from '../auth.middleware.js';
 
 const router = Router();
 
-// Standard single-seat booking endpoint
+// single-seat booking endpoint
 router.post('/create', bookingController.createBooking);
-
-// New endpoint for booking multiple seats in one transaction
+//endpoint for booking multiple seats in one transaction
 router.post('/multiple', bookingController.createMultipleBookings);
-
 router.get('/user-bookings', authMiddleware, bookingController.getUserBookings);
 router.post('/:bookingId/cancel', authMiddleware, bookingController.cancelBooking);
 

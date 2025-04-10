@@ -24,10 +24,6 @@ const SeatLayout = ({ onSeatSelect, selectedSeatIds: externalSelectedSeatIds }) 
   useEffect(() => {
     const fetchAvailableSeats = async () => {
       try {
-        if (!departureStationId || !arrivalStationId) {
-          throw new Error('Departure and arrival stations are required');
-        }
-        
         setLoading(true);
         console.log(`Fetching available seats for journey from station ${departureStationId} to ${arrivalStationId}`);
         
@@ -71,34 +67,7 @@ const SeatLayout = ({ onSeatSelect, selectedSeatIds: externalSelectedSeatIds }) 
         setError(err.message || 'Error fetching seats');
         setLoading(false);
         
-        // Fallback to hardcoded sample seats for testing UI
-        const sampleSeats = {};
-        const sampleAvailableSeats = [];
         
-        for (let car = 1; car <= 2; car++) {
-          sampleSeats[car] = [];
-          for (let i = 1; i <= 10; i++) {
-            const isAvailable = Math.random() > 0.3; // 70% seats available
-            const seat = {
-              id: (car - 1) * 10 + i,
-              seat_number: `${i}`,
-              car_number: car,
-              is_available: isAvailable
-            };
-            
-            sampleSeats[car].push(seat);
-            
-            if (isAvailable) {
-              sampleAvailableSeats.push(seat);
-            }
-          }
-        }
-        
-        setSeats(sampleSeats);
-        setAvailableSeats(sampleAvailableSeats);
-        
-        // Pass the sample available seats to parent
-        onSeatSelect(selectedSeatIds, getSelectedSeatsDetails(selectedSeatIds), sampleAvailableSeats);
       }
     };
     
@@ -117,7 +86,6 @@ const SeatLayout = ({ onSeatSelect, selectedSeatIds: externalSelectedSeatIds }) 
   
   const handleSeatClick = (seat) => {
     if (!seat.is_available) return; // Don't allow selection of unavailable seats
-    
     // Toggle selection
     let updatedSelectedSeats;
     if (selectedSeatIds.includes(seat.id)) {
@@ -132,10 +100,6 @@ const SeatLayout = ({ onSeatSelect, selectedSeatIds: externalSelectedSeatIds }) 
     const selectedSeatsDetails = getSelectedSeatsDetails(updatedSelectedSeats);
     onSeatSelect(updatedSelectedSeats, selectedSeatsDetails, availableSeats);
   };
-  
-  if (loading) return <div className="loading">Loading seats...</div>;
-  if (error) return <div className="error">Error: {error}</div>;
-
   return (
     <div className="seat-layout-container">
       <div className="legend">

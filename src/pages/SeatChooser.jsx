@@ -25,17 +25,6 @@ const SeatChooser = () => {
   useEffect(() => {
     const fetchStationDetails = async () => {
       try {
-        // Check if we have both station IDs
-        if (!departureStationId || !arrivalStationId) {
-          navigate('/station-select');
-          return;
-        }
-        
-        // Validate that arrival is after departure
-        if (parseInt(departureStationId) >= parseInt(arrivalStationId)) {
-          setError('Invalid station selection: arrival must be after departure');
-          return;
-        }
         
         // Fetch station details
         const [departureRes, arrivalRes] = await Promise.all([
@@ -69,7 +58,6 @@ const SeatChooser = () => {
     const parsedSeats = seats.map(seat => {
       const seatNum = seat.seat_number.toString();
       
-      // Assuming seat format like "1A", "2B", etc.
       // Extract row number and column letter
       const row = seatNum.match(/\d+/) ? seatNum.match(/\d+/)[0] : '';
       const col = seatNum.match(/[A-Z]+/i) ? seatNum.match(/[A-Z]+/i)[0].toUpperCase() : '';
@@ -90,21 +78,14 @@ const SeatChooser = () => {
       }
       seatsByCarAndRow[key].push(seat);
     });
-
-    // Define column order (assuming standard A, B, C, D ordering)
-    const colOrder = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
-    
+    const colOrder = ['A', 'B', 'C', 'D'];  
     // Look for contiguous seats in the same row of each car
     for (const carRowKey in seatsByCarAndRow) {
       const rowSeats = seatsByCarAndRow[carRowKey];
-      
-      // Sort by column within the row
-      rowSeats.sort((a, b) => colOrder.indexOf(a.col) - colOrder.indexOf(b.col));
-      
+      rowSeats.sort((a, b) => colOrder.indexOf(a.col) - colOrder.indexOf(b.col)); // Sort by column within the row
       // Find contiguous block of seats (adjacent columns)
       for (let i = 0; i <= rowSeats.length - count; i++) {
         const candidate = rowSeats.slice(i, i + count);
-        
         // Check if seats are truly contiguous (adjacent columns)
         let contiguous = true;
         for (let j = 1; j < candidate.length; j++) {
@@ -134,13 +115,10 @@ const SeatChooser = () => {
       setError('No available seats to auto-choose');
       return;
     }
-    
-    // Reset previously selected seats
     setSelectedSeatIds([]);
     setSelectedSeatsDetails([]);
     
     const numSeats = parseInt(seatCount);
-    
     if (numSeats > availableSeats.length) {
       setError(`Not enough available seats. Only ${availableSeats.length} seats available.`);
       return;
@@ -177,18 +155,6 @@ const SeatChooser = () => {
             break;
           }
         }
-        
-        if (selectedFromSameCar) {
-          setSelectedSeatIds(selectedFromSameCar.map(seat => seat.id));
-          setSelectedSeatsDetails(selectedFromSameCar);
-          setError(`Could not find ${numSeats} adjacent seats. Selected seats in the same car instead.`);
-        } else {
-          // Last resort: just pick the first N available seats
-          const firstNSeats = availableSeats.slice(0, numSeats);
-          setSelectedSeatIds(firstNSeats.map(seat => seat.id));
-          setSelectedSeatsDetails(firstNSeats);
-          setError(`Could not find ${numSeats} adjacent seats. Selected first available seats instead.`);
-        }
       }
     }
   };
@@ -213,20 +179,35 @@ const SeatChooser = () => {
       const user = JSON.parse(userJson);
       const userId = user.id;
       
-      // Create bookings for all selected seats
-      const bookingPromises = selectedSeatIds.map(seatId => 
-        axios.post('/api/bookings/create', {
+      let bookingIds = [];
+      
+      // Use different endpoints based on the number of seats selected
+      if (selectedSeatIds.length === 1) {
+        // For single seat booking, use the createBooking endpoint
+        const response = await axios.post('/api/bookings/create', {
           userId,
           departureStationId: parseInt(departureStationId),
           arrivalStationId: parseInt(arrivalStationId),
-          seatId: seatId
-        })
-      );
-      
-      const responses = await Promise.all(bookingPromises);
-      
-      // Extract booking IDs
-      const bookingIds = responses.map(response => response.data.id);
+          seatId: selectedSeatIds[0]
+        });
+        bookingIds = [response.data.id];
+      } else {
+        // For multiple seats, use the createMultipleBookings endpoint
+        const response = await axios.post('/api/bookings/multiple', {
+          userId,
+          departureStationId: parseInt(departureStationId),
+          arrivalStationId: parseInt(arrivalStationId),
+          seatIds: selectedSeatIds
+        });
+        
+        // Extract booking IDs from the response
+        if (Array.isArray(response.data)) {
+          bookingIds = response.data.map(booking => booking.id);
+          console.log('Multiple bookings created successfully with IDs:', bookingIds);
+        } else {
+          throw new Error('Unexpected response format from multiple bookings endpoint');
+        }
+      }
       
       // Store booking details for the confirmation page
       const bookingDetails = {

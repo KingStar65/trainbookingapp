@@ -116,7 +116,6 @@ const SeatLayout = ({ onSeatSelect, selectedSeatIds: externalSelectedSeatIds }) 
           <span>Selected</span>
         </div>
       </div>
-      
       <div className="multi-seat-info">
         You can select multiple seats by clicking on them
       </div>
